@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>English to Kurdish (Latin Script) Translator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        textarea { resize: none; }
+        textarea::-webkit-scrollbar { width: 8px; }
+        textarea::-webkit-scrollbar-track { background: #1f2937; }
+        textarea::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 4px; }
+        textarea::-webkit-scrollbar-thumb:hover { background: #6b7280; }
+        .spinner {
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: #34d399;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-200 flex items-center justify-center min-h-screen p-4">
+
+    <div class="w-full max-w-4xl mx-auto">
+        <header class="text-center mb-8">
+            <h1 class="text-4xl md:text-5xl font-bold text-white">English to Kurdish <span class="text-emerald-400">(Latin Script)</span></h1>
+            <p class="text-lg text-gray-400 mt-2">AI-Powered Translation Tool</p>
+        </header>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="flex flex-col">
+                <label for="english-input" class="mb-2 font-semibold text-gray-300">English</label>
+                <textarea id="english-input" rows="10" class="w-full p-4 bg-gray-800 border-2 border-gray-700 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 focus:outline-none transition duration-200" placeholder="Type or paste your text to translate..."></textarea>
+            </div>
+
+            <div class="flex flex-col">
+                <div class="flex justify-between items-center mb-2">
+                    <label for="kurdish-output" class="font-semibold text-gray-300">Kurdish (Latin Script)</label>
+                    <button id="copy-button" class="px-3 py-1 text-sm bg-gray-700 hover:bg-emerald-600 rounded-md transition duration-200 flex items-center space-x-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-clipboard" viewBox="0 0 16 16"><path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1v-1z"/><path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3z"/></svg>
+                        <span id="copy-text">Copy</span>
+                    </button>
+                </div>
+                <div class="relative w-full h-full">
+                    <textarea id="kurdish-output" rows="10" readonly class="w-full h-full p-4 bg-gray-800 border-2 border-gray-700 rounded-lg focus:outline-none transition duration-200" placeholder="Translation will appear here..."></textarea>
+                    <div id="spinner-container" class="absolute inset-0 bg-gray-800 bg-opacity-70 flex items-center justify-center rounded-lg" style="display: none;">
+                         <div class="spinner"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex justify-center items-center gap-4 mt-4">
+            <button id="translate-button" class="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg transition duration-200 flex items-center justify-center w-40 disabled:opacity-50 disabled:cursor-not-allowed">
+                <span>Translate</span>
+            </button>
+             <button id="clear-button" class="px-6 py-2 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg transition duration-200">
+                Clear
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // DOM Elements
+        const englishInput = document.getElementById('english-input');
+        const kurdishOutput = document.getElementById('kurdish-output');
+        const copyButton = document.getElementById('copy-button');
+        const copyText = document.getElementById('copy-text');
+        const clearButton = document.getElementById('clear-button');
+        const translateButton = document.getElementById('translate-button');
+        const spinnerContainer = document.getElementById('spinner-container');
+        
+        // --- IMPORTANT: PASTE YOUR NEW, SECRET API KEY FROM YOUR NEW PROJECT HERE ---
+        const apiKey = "AIzaSyC4fkbNZQNYNFPuhFJTjsVSPSporGMfT6A";
+        
+        // --- This is the FINAL correct API URL ---
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`;
+
+        // Function to call the Gemini API for translation
+        async function getTranslation(textToTranslate) {
+            if (!apiKey || apiKey === "YOUR_NEW_SECRET_KEY_HERE") {
+                return "Error: API key is missing. Please add your new, secret Google AI API key to the script.";
+            }
+
+            const payload = {
+                contents: [{ parts: [{ text: `Translate the following English text to Kurdish (Sorani), then transliterate the result into the Latin alphabet. Only provide the final Latin-script transliteration. Text: "${textToTranslate}"` }] }]
+            };
+            
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(`API Error: ${response.status} - ${errorData.error?.message || 'Unknown error'}`);
+                }
+
+                const result = await response.json();
+                
+                if (!result.candidates || result.candidates.length === 0) {
+                    return `Translation blocked. Reason: ${result.promptFeedback?.blockReason || 'No content returned'}`;
+                }
+
+                const candidate = result.candidates[0];
+
+                if (candidate.content?.parts?.[0]?.text) {
+                    return candidate.content.parts[0].text;
+                } else {
+                    throw new Error("Invalid response structure from API.");
+                }
+            } catch (error) {
+                console.error("Translation failed:", error);
+                return `Translation failed. Please check your new API key and connection. Details: ${error.message}`;
+            }
+        }
+
+        // Event listener for the translate button
+        translateButton.addEventListener('click', async () => {
+            const englishText = englishInput.value.trim();
+            if (!englishText) return;
+
+            translateButton.disabled = true;
+            translateButton.querySelector('span').textContent = 'Translating...';
+            spinnerContainer.style.display = 'flex';
+            kurdishOutput.value = '';
+
+            const translation = await getTranslation(englishText);
+            kurdishOutput.value = translation;
+
+            translateButton.disabled = false;
+            translateButton.querySelector('span').textContent = 'Translate';
+            spinnerContainer.style.display = 'none';
+        });
+
+        // Event listener for the copy button
+        copyButton.addEventListener('click', () => {
+            if (kurdishOutput.value) {
+                navigator.clipboard.writeText(kurdishOutput.value).then(() => {
+                    copyText.textContent = 'Copied!';
+                    copyButton.classList.add('bg-emerald-600');
+                    setTimeout(() => {
+                        copyText.textContent = 'Copy';
+                        copyButton.classList.remove('bg-emerald-600');
+                    }, 2000);
+                });
+            }
+        });
+        
+        // Event listener for the clear button
+        clearButton.addEventListener('click', () => {
+            englishInput.value = '';
+            kurdishOutput.value = '';
+            englishInput.focus();
+        });
+    </script>
+</body>
+</html>
